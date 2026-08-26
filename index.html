@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElaViva — Conectando Saúde e Proteção</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #fcf8f9;
+            color: #4a4a4a;
+        }
+        .navbar-brand {
+            font-weight: 800;
+            color: #d63384 !important;
+            font-size: 1.6rem;
+        }
+        .hero-section {
+            background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+            padding: 100px 0 80px 0;
+            border-bottom-left-radius: 50px;
+            border-bottom-right-radius: 50px;
+        }
+        .btn-gradient {
+            background: linear-gradient(90deg, #d63384 0%, #dc3545 100%);
+            color: white;
+            border: none;
+            font-weight: bold;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        .btn-gradient:hover {
+            color: white;
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .btn-outline-custom {
+            border: 2px solid #d63384;
+            color: #d63384;
+            font-weight: bold;
+        }
+        .btn-outline-custom:hover {
+            background-color: #d63384;
+            color: white;
+        }
+        .feature-card {
+            border: none;
+            border-radius: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(214, 51, 132, 0.1) !important;
+        }
+        .icon-box {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        .modal-content {
+            border-radius: 25px;
+            border: none;
+        }
+        .modal-header {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="#">🌸ElaViva</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center gap-2">
+                    <li class="nav-item"><a class="nav-link fw-semibold text-secondary px-3" href="#recursos">Recursos</a></li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-custom rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#loginModal" onclick="alternarAbas('login')">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i>Entrar
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero-section mt-5">
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show rounded-pill px-4 shadow-sm mb-4" role="alert">
+                            <i class="fa-solid fa-triangle-exclamation me-2"></i> {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6 text-center text-lg-start">
+                    <span class="badge bg-white text-danger fw-bold shadow-sm px-3 py-2 rounded-pill mb-3">🚀 Nova Versão Disponível</span>
+                    <h1 class="display-4 fw-bold lh-sm mb-3">
+                        Seu espaço seguro de <span style="color: #d63384;">saúde</span>, treino e <span style="color: #dc3545;">proteção</span>.
+                    </h1>
+                    <p class="lead text-secondary mb-4">
+                        O ElaViva combina inteligência preditiva para acompanhar seu ciclo menstrual com ferramentas discretas de segurança e redes de apoio imediato. Tudo em um só lugar.
+                    </p>
+                    <div class="d-flex justify-content-center justify-content-lg-start gap-3">
+                        <button class="btn btn-gradient btn-lg rounded-pill px-4 shadow" data-bs-toggle="modal" data-bs-target="#loginModal" onclick="alternarAbas('cadastro')">
+                            Começar Agora Gratuitamente
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <div class="p-5 bg-white shadow rounded-circle d-inline-block border border-5 border-light" style="width: 300px; height: 300px;">
+                        <i class="fa-solid fa-heart-pulse text-danger" style="font-size: 5rem; margin-top: 30px;"></i>
+                        <div class="fw-bold mt-3 text-secondary">Saúde & Bem-Estar</div>
+                        <span class="badge bg-danger shadow-sm">Segurança Ativa</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="recursos" class="container py-5 my-4">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Projetado para o seu dia a dia</h2>
+            <p class="text-muted">Funcionalidades inteligentes criadas sob medida para apoiar e proteger a mulher moderna.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card feature-card h-100 p-4 shadow-sm">
+                    <div class="icon-box bg-danger-subtle text-danger"><i class="fa-solid fa-calendar-day"></i></div>
+                    <h5 class="fw-bold text-dark">Treinos Periodizados</h5>
+                    <p class="text-muted card-text">Uma rotina inteligente que muda automaticamente baseada no seu ciclo hormonal, aliviando dores e potencializando resultados.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card feature-card h-100 p-4 shadow-sm">
+                    <div class="icon-box bg-warning-subtle text-warning"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h5 class="fw-bold text-dark">Disparo Silencioso</h5>
+                    <p class="text-muted card-text">Botão de pânico de fundo que salva o alerta de segurança no servidor e redireciona instantaneamente para uma tela neutra de disfarce.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card feature-card h-100 p-4 shadow-sm">
+                    <div class="icon-box bg-info-subtle text-info"><i class="fa-solid fa-phone-nodes"></i></div>
+                    <h5 class="fw-bold text-dark">Rede de Apoio Direta</h5>
+                    <p class="text-muted card-text">Acesso direto e rápido aos canais oficiais de denúncia e atendimento emergencial à mulher (Ligue 180, 190, 197 ou um número de emergência).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg p-3">
+                <div class="modal-header border-0 pb-0">
+                    <h4 class="modal-title fw-bold text-dark" id="modalTitulo">Seja bem-vinda de volta!</h4>
+                    <button type="button" class="btn-close" data-bs-close="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    
+                    <div id="formLogin">
+                        <p class="text-muted small mb-4">Insira suas credenciais abaixo para entrar no seu painel integrado.</p>
+                        <form action="/login" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-secondary small">Nome de Usuária</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
+                                    <input type="text" name="usuario" class="form-control bg-light border-start-0" placeholder="Ex: Maria_Silva" required style="padding: 10px;">
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-secondary small">Senha</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-lock text-muted"></i></span>
+                                    <input type="password" name="senha" class="form-control bg-light border-start-0" placeholder="Digite sua senha" required style="padding: 10px;">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-gradient w-100 py-3 rounded-pill fw-bold shadow-sm mt-2">
+                                Acessar Painel <i class="fa-solid fa-arrow-right ms-2"></i>
+                            </button>
+                        </form>
+                        <p class="text-center small text-muted mt-4 mb-1">
+                            Não tem uma conta? <a href="#" onclick="alternarAbas('cadastro')" class="text-danger fw-bold text-decoration-none">Cadastre-se</a>
+                        </p>
+                    </div>
+
+                    <div id="formCadastro" style="display: none;">
+                        <p class="text-muted small mb-4">Crie sua conta agora para começar a gerenciar sua saúde e segurança.</p>
+                        <form action="/cadastro" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-secondary small">Escolha um Nome de Usuária</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user-plus text-muted"></i></span>
+                                    <input type="text" name="usuario_cadastro" class="form-control bg-light border-start-0" placeholder="Ex: Ana_Souza" required style="padding: 10px;">
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-secondary small">Crie uma Senha Seguro</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-key text-muted"></i></span>
+                                    <input type="password" name="senha_cadastro" class="form-control bg-light border-start-0" placeholder="Mínimo 6 caracteres" required style="padding: 10px;">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-gradient w-100 py-3 rounded-pill fw-bold shadow-sm mt-2">
+                                Criar Minha Conta <i class="fa-solid fa-check ms-2"></i>
+                            </button>
+                        </form>
+                        <p class="text-center small text-muted mt-4 mb-1">
+                            Já possui uma conta? <a href="#" onclick="alternarAbas('login')" class="text-danger fw-bold text-decoration-none">Fazer Login</a>
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white-50 text-center py-4 mt-5">
+        <div class="container small">&copy; 2026 ElaViva — Desenvolvido com foco em Saúde e Segurança da Mulher.</div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function alternarAbas(modo) {
+            const titulo = document.getElementById('modalTitulo');
+            const login = document.getElementById('formLogin');
+            const cadastro = document.getElementById('formCadastro');
+
+            if (modo === 'cadastro') {
+                titulo.textContent = 'Crie sua Conta';
+                login.style.display = 'none';
+                cadastro.style.display = 'block';
+            } else {
+                titulo.textContent = 'Seja bem-vinda de volta!';
+                login.style.display = 'block';
+                cadastro.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

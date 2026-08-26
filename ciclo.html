@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElaViva — Meu Ciclo e Treinos</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #fcf8f9;
+            color: #4a4a4a;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .navbar-brand {
+            font-weight: 800;
+            color: #d63384 !important;
+        }
+        .main-container {
+            margin-top: 100px;
+            max-width: 1000px;
+            flex: 1;
+        }
+        .card-custom {
+            border: none;
+            border-radius: 20px;
+            background: white;
+        }
+        .card-fase-atual {
+            background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+            border-left: 6px solid #d63384;
+        }
+        .btn-gradient {
+            background: linear-gradient(90deg, #d63384 0%, #dc3545 100%);
+            color: white;
+            border: none;
+            font-weight: bold;
+        }
+        .btn-gradient:hover {
+            color: white;
+            opacity: 0.9;
+        }
+        .table-container {
+            border-radius: 15px;
+            overflow: hidden;
+            background: white;
+        }
+        .dia-atual-linha {
+            background-color: #fff0f5 !important;
+            font-weight: bold;
+            border-left: 4px solid #d63384;
+        }
+        .badge-fase {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        /* Estilos para os cards de treino */
+        .treino-item-card {
+            transition: all 0.3s ease;
+        }
+        .treino-concluido {
+            background-color: #e2e8f0 !important;
+            border-left-color: #198754 !important;
+            opacity: 0.6;
+        }
+        .treino-concluido .text-exercicio {
+            text-decoration: line-through;
+            color: #6c757d !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Menu Superior -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top shadow-sm">
+        <div class="container">
+            <div class="d-flex align-items-center gap-3">
+                <a href="/dashboard" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Voltar
+                </a>
+                <a class="navbar-brand mb-0 h1 d-none d-sm-inline-block" href="/dashboard">🌸 ElaViva</a>
+            </div>
+            
+            <div class="ms-auto">
+                <a href="/logout" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold">
+                    <i class="fa-solid fa-right-from-bracket me-1"></i> Sair
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <div class="container main-container py-4">
+        <div class="row g-4">
+            
+            <!-- COLUNA DA ESQUERDA: Formulário -->
+            <div class="col-lg-4">
+                <div class="card card-custom p-4 shadow-sm">
+                    <h5 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-calendar-plus text-danger me-2"></i>Atualizar Ciclo</h5>
+                    <p class="text-muted small">Insira os dados da sua última menstruação para recalcular seu mapa hormonal e rotina de exercícios.</p>
+                    
+                    <form action="/ciclo" method="POST" class="mt-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Data do Último Primeiro Dia</label>
+                            <input type="date" name="ultima_menstruacao" class="form-control rounded-3" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary">Duração Média do Ciclo (Dias)</label>
+                            <input type="number" name="duracao_ciclo" class="form-control rounded-3" placeholder="Ex: 28" min="20" max="45" value="28" required>
+                        </div>
+                        <button type="submit" class="btn btn-gradient w-100 py-2 rounded-pill fw-bold shadow-sm">
+                            <i class="fa-solid fa-arrows-rotate me-2"></i>Recalcular Mapa
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- COLUNA DA DIREITA: Informações Atuais e Exercícios -->
+            <div class="col-lg-8">
+                {% if fase %}
+                <!-- Card Informativo da Fase -->
+                <div class="card card-custom card-fase-atual p-4 shadow-sm mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <span class="badge bg-white text-danger shadow-sm mb-2 fw-bold px-3 py-1 rounded-pill">Fase Atual</span>
+                            <h2 class="fw-bold text-dark mb-2">{{ fase }}</h2>
+                            <p class="text-secondary mb-0 small"><i class="fa-solid fa-circle-info me-1 text-muted"></i> {{ previsao }}</p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <i class="fa-solid fa-wand-magic-sparkles text-danger opacity-50" style="font-size: 3.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAINEL DE TREINOS VISUAL E INTERATIVO -->
+                <div class="card card-custom p-4 shadow-sm mb-4 border-top border-5 border-danger">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-dark mb-0">
+                            <i class="fa-solid fa-dumbbell text-danger me-2"></i>Sua Rotina de Treino para Hoje
+                        </h5>
+                        <span class="badge bg-danger-subtle text-danger rounded-pill fw-bold px-3 small">Meta de Hoje</span>
+                    </div>
+                    
+                    <p class="text-muted small mb-4">Marque as atividades sugeridas conforme for concluindo os exercícios:</p>
+
+                    <div class="row g-3">
+                        {% for item in treino_hoje %}
+                        <div class="col-12">
+                            <div class="p-3 bg-light rounded-3 d-flex align-items-center justify-content-between border-start border-4 border-danger position-relative treino-item-card">
+                                <div class="d-flex align-items-center gap-3">
+                                    
+                                    <!-- Ícones Dinâmicos -->
+                                    <div class="bg-white rounded-circle p-2 text-danger shadow-sm d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 1.1rem;">
+                                        {% if 'Yoga' in item or 'Alongamento' in item or 'Regenerativo' in item %}
+                                            <i class="fa-solid fa-spa text-success"></i>
+                                        {% elif 'Musculação' in item or 'Força' in item or 'Inferiores' in item or 'Membros' in item %}
+                                            <i class="fa-solid fa-weight-hanging text-primary"></i>
+                                        {% elif 'HIIT' in item or 'Corrida' in item or 'Explosão' in item %}
+                                            <i class="fa-solid fa-bolt text-warning"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-person-biking text-info"></i>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div>
+                                        <span class="fw-semibold text-dark d-block text-exercicio small">{{ item }}</span>
+                                        <small class="text-muted"><i class="fa-regular fa-clock me-1"></i> Tempo ideal: 20-30 min</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Checkbox de Conclusão -->
+                                <div class="form-check me-2">
+                                    <input class="form-check-input shadow-none" type="checkbox" style="transform: scale(1.3); cursor: pointer;" onclick="marcarComoConcluido(this)">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <!-- Estado Vazio -->
+                <div class="card card-custom p-5 text-center shadow-sm mb-4">
+                    <i class="fa-solid fa-calendar-xmark text-muted mb-3" style="font-size: 4rem;"></i>
+                    <h4 class="fw-bold text-dark">Nenhum ciclo registrado</h4>
+                    <p class="text-muted small">Utilize o formulário lateral para cadastrar os dados do seu ciclo.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if cronograma %}
+        <!-- Tabela Mensal Completa -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card card-custom p-4 shadow-sm">
+                    <h5 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-table-list text-danger me-2"></i>Seu Planejamento Mensal Completo</h5>
+                    <div class="table-responsive table-container shadow-sm border mt-3">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 15%">Data</th>
+                                    <th style="width: 12%">Dia do Ciclo</th>
+                                    <th style="width: 18%">Fase</th>
+                                    <th style="width: 30%">Foco do Treino</th>
+                                    <th style="width: 25%">Dica de Bem-Estar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dia in cronograma %}
+                                <tr class="{% if dia.eh_hoje %}dia-atual-linha{% endif %}">
+                                    <td class="text-secondary small">
+                                        {% if dia.eh_hoje %}<span class="badge bg-danger me-1">Hoje</span>{% endif %}{{ dia.data }}
+                                    </td>
+                                    <td class="fw-semibold text-dark small">Dia {{ dia.dia_ciclo }}</td>
+                                    <td><span class="badge-fase text-dark">{{ dia.fase }}</span></td>
+                                    <td class="text-secondary small">{{ dia.treino }}</td>
+                                    <td class="text-muted small italic"><em>{{ dia.dica }}</em></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="bg-white border-top text-center py-3 mt-5 text-muted small">
+        <div class="container">&copy; 2026 ElaViva — Espaço Seguro da Mulher.</div>
+    </footer>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Lógica para Riscar Exercícios Concluídos -->
+    <script>
+        function marcarComoConcluido(checkbox) {
+            let cardElemento = checkbox.closest('.treino-item-card');
+            if (checkbox.checked) {
+                cardElemento.classList.add('treino-concluido');
+            } else {
+                cardElemento.classList.remove('treino-concluido');
+            }
+        }
+    </script>
+
+    <!-- SCRIPT DO GATILHO OCULTO (Usa REPLACE para limpar histórico) -->
+    <!-- SCRIPT DO GATILHO OCULTO (Usa REPLACE para limpar histórico) -->
+<script>
+    let cliquesSeguidos = 0;
+    let temporizadorReset;
+
+    function registrarToque(evento) {
+        if (evento.target.tagName === 'INPUT' || 
+            evento.target.tagName === 'BUTTON' || 
+            evento.target.tagName === 'A' ||
+            evento.target.closest('button') ||
+            evento.target.closest('a') ||
+            evento.target.classList.contains('form-check-input')) {
+            return; 
+        }
+
+        cliquesSeguidos++;
+
+        clearTimeout(temporizadorReset);
+
+        if (cliquesSeguidos === 3) {
+            cliquesSeguidos = 0;
+            // SUBSTITUI a URL limpando o rastro no histórico do browser
+            window.location.replace("/denuncia"); 
+            return;
+        }
+
+        // Alterado de 2000 para 500 (Meio Segundo)
+        temporizadorReset = setTimeout(function() {
+            cliquesSeguidos = 0;
+        }, 500); 
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            window.addEventListener('touchstart', registrarToque, true);
+        } else {
+            window.addEventListener('click', registrarToque, true);
+        }
+    });
+</script>
+</body>
+</html>

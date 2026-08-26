@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Exercícios</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -20,13 +21,62 @@
             💪 Área de Exercícios
         </span>
 
+        <a href="/dashboard" class="btn btn-light">
+            Voltar
+        </a>
+
     </div>
 
 </nav>
 
 <div class="container mt-4">
 
-    <!-- Formulário -->
+    <!-- Recomendações -->
+
+    <div class="card shadow mb-4 border-success">
+
+        <div class="card-body">
+
+            <h3 class="text-success mb-3">
+                🌸 Exercícios Recomendados
+            </h3>
+
+            <h5>
+                Durante o período menstrual:
+            </h5>
+
+            <ul>
+                <li>🚶 Caminhada leve</li>
+                <li>🧘 Yoga</li>
+                <li>🤸 Alongamentos</li>
+                <li>💨 Exercícios respiratórios</li>
+            </ul>
+
+            <hr>
+
+            <h5>
+                Fora do período menstrual:
+            </h5>
+
+            <ul>
+                <li>🏋️ Musculação leve/moderada</li>
+                <li>🚴 Bicicleta</li>
+                <li>🏃 Corrida leve</li>
+                <li>🔥 Treino funcional</li>
+            </ul>
+
+            <div class="alert alert-warning mt-3">
+
+                Cada corpo reage de forma diferente.
+                Respeite seus limites e procure orientação profissional.
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Cadastro de treino -->
 
     <div class="card shadow mb-4">
 
@@ -85,14 +135,14 @@
 
     </div>
 
-    <!-- Lista exercícios -->
+    <!-- Exercícios cadastrados -->
 
     <div class="card shadow">
 
         <div class="card-body">
 
             <h3 class="mb-4">
-                Treinos Cadastrados
+                Exercícios Cadastrados
             </h3>
 
             <table class="table table-bordered">
@@ -100,9 +150,11 @@
                 <thead>
 
                     <tr>
+
                         <th>Exercício</th>
                         <th>Repetições</th>
                         <th>Observações</th>
+
                     </tr>
 
                 </thead>
