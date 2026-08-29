@@ -8,7 +8,7 @@ from conexao import criar_conexao, inicializar_banco
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 
-# Garante a criação das tabelas estruturais no PostgreSQL do Render
+# Inicializa as tabelas do banco automaticamente no Render
 inicializar_banco()
 
 # Configurações da API de WhatsApp
@@ -63,7 +63,6 @@ def login_page():
         cursor.close()
         conexao.close()
 
-        # Tratamento seguro para tuplas retornadas pelo psycopg2
         if resultado and check_password_hash(resultado[1], senha_input):
             session["usuario"] = resultado[0]
             return redirect(url_for("dashboard"))
@@ -197,36 +196,15 @@ def ciclo():
             flash("Ciclo menstrual atualizado com sucesso!", "success")
             return redirect(url_for("dashboard"))
             
-        except Exception as e:
-            print(f"❌ Erro ao salvar ciclo: {e}")
+        except Exception:
             flash("Ocorreu um erro ao salvar o seu ciclo. Tente novamente.", "danger")
             return redirect(url_for("ciclo"))
 
     return render_template("ciclo.html")
 
-@app.route("/saude")
-def saude():
-    if "usuario" not in session:
-        return redirect(url_for("index"))
-    return render_template("saude.html")
-
-@app.route("/exercicios")
-def exercicios():
-    if "usuario" not in session:
-        return redirect(url_for("index"))
-    return render_template("exercicios.html")
-
-@app.route("/caminhada")
-def caminhada():
-    if "usuario" not in session:
-        return redirect(url_for("index"))
-    return render_template("caminhada.html")
-
 @app.route("/denuncia", methods=["GET", "POST"])
 def denuncia():
     if "usuario" not in session:
-        if request.is_json:
-            return jsonify({"status": "nao_autorizado"}), 401
         return redirect(url_for("index"))
 
     usuario = session["usuario"]
@@ -235,26 +213,64 @@ def denuncia():
     from psycopg2.extras import RealDictCursor
     cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
-    if request.method == "POST" and (request.is_json or request.headers.get("Content-Type") == "application/json"):
-        dados = request.get_json() or {}
-        lat = dados.get("latitude")
-        lng = dados.get("longitude")
+    if request.method == "POST":
+        nome_video = request.form.get("nome_video", "").strip()
+        tel_video = request.form.get("tel_video", "").strip()
+        nome_msg = request.form.get("nome_msg", "").strip()
+        tel_msg = request.form.get("tel_msg", "").strip()
+        nome_ligar = request.form.get("nome_ligar", "Polícia Militar").strip()
+        tel_ligar = request.form.get("tel_ligar", "190").strip()
 
-        cursor.execute("SELECT tel_msg, tel_video, tel_ligar FROM contatos_emergencia WHERE usuario_nome = %s LIMIT 1", (usuario,))
-        contato = cursor.fetchone()
+        cursor.execute("SELECT id FROM contatos_emergencia WHERE usuario_nome = %s LIMIT 1", (usuario,))
+        existe = cursor.fetchone()
 
-        if contato:
-            numero_alvo = contato.get("tel_msg") or contato.get("tel_video") or contato.get("tel_ligar")
-            if numero_alvo:
-                enviar_whatsapp_emergencia(numero_alvo, lat, lng)
+        if existe:
+            sql = """
+                UPDATE contatos_emergencia 
+                SET nome_video=%s, tel_video=%s, nome_msg=%s, tel_msg=%s, nome_ligar=%s, tel_ligar=%s 
+                WHERE usuario_nome=%s
+            """
+            cursor.execute(sql, (nome_video, tel_video, nome_msg, tel_msg, nome_ligar, tel_ligar, usuario))
+        else:
+            sql = """
+                INSERT INTO contatos_emergencia (usuario_nome, nome_video, tel_video, nome_msg, tel_msg, nome_ligar, tel_ligar)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql, (usuario, nome_video, tel_video, nome_msg, tel_msg, nome_ligar, tel_ligar))
 
-        cursor.close()
-        conexao.close()
-        return jsonify({"status": "sucesso", "mensagem": "Alerta disparado!"}), 200
-        
+        conexao.commit()
+        flash("Contatos de emergência atualizados com sucesso!", "success")
+
+    cursor.execute("SELECT * FROM contatos_emergencia WHERE usuario_nome = %s LIMIT 1", (usuario,))
+    contatos = cursor.fetchone()
+
     cursor.close()
     conexao.close()
-    return render_template("denuncia.html")
+    return render_template("denuncia.html", contatos=contatos)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+@app.route("/disparar_emergencia", methods=["POST"])
+def disparar_emergencia():
+    if "usuario" in session:
+        try:
+            conexao = criar_conexao()
+            cursor = conexao.cursor()
+            
+            cursor.execute("SELECT id FROM usuarios WHERE nome = %s LIMIT 1", (session["usuario"],))
+            user_data = cursor.fetchone()
+            usuario_id = user_data[0] if user_data else 1
+            
+            # Garante a criação da tabela de alertas históricos se não existir
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS alertas_emergencia (
+                    id SERIAL PRIMARY KEY,
+                    usuario_id INTEGER,
+                    data_hora TIMESTAMP
+                );
+            """)
+            
+            sql = "INSERT INTO alertas_emergencia (usuario_id, data_hora) VALUES (%s, %s)"
+            cursor.execute(sql, (usuario_id, datetime.now()))
+            conexao.commit()
+            
+            cursor.close()
+            conexao.close()
