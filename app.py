@@ -1,106 +1,230 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from datetime import datetime, timedelta
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import requests
+from conexao import criar_conexao, inicializar_banco
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "chave_secreta_padrao")
+app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 
-def get_db_connection():
-    db_url = os.getenv("DATABASE_URL")
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+# Garante a criação das tabelas estruturais no PostgreSQL do Render
+inicializar_banco()
 
-@app.route('/')
-def index():
-    return redirect(url_for('ciclo'))
+# Configurações da API de WhatsApp
+EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "https://sua-instancia-evolution.com")
+EVOLUTION_INSTANCE = os.getenv("EVOLUTION_INSTANCE", "sua_instancia")
+EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "sua_api_key_aqui")
 
-@app.route('/ciclo', methods=['GET', 'POST'])
-def ciclo():
-    # Pega o id da sessão. Se não houver login ativo, usa o ID 1 por padrão para evitar quebrar a rota.
-    usuario_id = session.get('usuario_id', 1)
+def enviar_whatsapp_emergencia(numero_destino, lat, lng):
+    if not numero_destino:
+        return False
+    numero_limpo = ''.join(filter(str.isdigit, str(numero_destino)))
+    if not numero_limpo.startswith('55') and len(numero_limpo) <= 11:
+        numero_limpo = f"55{numero_limpo}"
 
-    ciclo_calculado = None
+    if lat and lng:
+        link_maps = f"https://google.com{lat},{lng}"
+        texto_mensagem = f"🚨 *ALERTA DE EMERGÊNCIA - ELA VIVA* 🚨\n\nPreciso de ajuda urgente!\n\n📍 *Minha localização em tempo real:*\n{link_maps}"
+    else:
+        texto_mensagem = "🚨 *ALERTA DE EMERGÊNCIA - ELA VIVA* 🚨\n\nPreciso de ajuda urgente!\n(Localização GPS indisponível no momento)."
 
-    if request.method == 'POST':
-        try:
-            data_str = request.form.get('ultima_menstruacao')
-            duracao_ciclo = int(request.form.get('duracao_ciclo', 28))
-            duracao_menstruacao = int(request.form.get('duracao_menstruacao', 5))
-
-            if data_str:
-                data_inicio = datetime.strptime(data_str, '%Y-%m-%d').date()
-
-                # Salva ou atualiza no banco
-                conn = get_db_connection()
-                cur = conn.cursor()
-                
-                cur.execute("""
-                    INSERT INTO ciclo (usuario_id, ultima_menstruacao, duracao_ciclo, duracao_menstruacao)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (usuario_id) 
-                    DO UPDATE SET 
-                        ultima_menstruacao = EXCLUDED.ultima_menstruacao,
-                        duracao_ciclo = EXCLUDED.duracao_ciclo,
-                        duracao_menstruacao = EXCLUDED.duracao_menstruacao;
-                """, (usuario_id, data_inicio, duracao_ciclo, duracao_menstruacao))
-                
-                conn.commit()
-                cur.close()
-                conn.close()
-
-                flash("Dados do ciclo salvos e calculados com sucesso!", "success")
-
-        except Exception as e:
-            print(f"Erro ao salvar ciclo: {e}")
-            flash("Ocorreu um erro ao processar o formulário. Verifique os dados digitados.", "danger")
-
-    # Busca os dados no banco para exibir na tela
+    endpoint = f"{EVOLUTION_API_URL}/message/sendText/{EVOLUTION_INSTANCE}"
+    headers = {"Content-Type": "application/json", "apikey": EVOLUTION_API_KEY}
+    payload = {
+        "number": numero_limpo,
+        "options": {"delay": 0, "presence": "composing", "linkPreview": True},
+        "textMessage": {"text": texto_mensagem}
+    }
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM ciclo WHERE usuario_id = %s;", (usuario_id,))
-        dados = cur.fetchone()
-        cur.close()
-        conn.close()
+        response = requests.post(endpoint, json=payload, headers=headers, timeout=8)
+        return response.status_code in [200, 201]
+    except Exception:
+        return False
 
-        if dados:
-            data_inicio = dados['ultima_menstruacao']
+@app.route("/")
+def index():
+    if "usuario" in session:
+        return redirect(url_for("dashboard"))
+    return render_template("index.html")
+
+@app.route("/login", methods=["POST"])
+def login_page():
+    if request.method == "POST":
+        usuario_input = request.form["usuario"].strip()
+        senha_input = request.form["senha"].strip()
+
+        conexao = criar_conexao()
+        cursor = conexao.cursor()
+        
+        cursor.execute("SELECT nome, senha FROM usuarios WHERE nome = %s LIMIT 1", (usuario_input,))
+        resultado = cursor.fetchone()
+        
+        cursor.close()
+        conexao.close()
+
+        # Tratamento seguro para tuplas retornadas pelo psycopg2
+        if resultado and check_password_hash(resultado[1], senha_input):
+            session["usuario"] = resultado[0]
+            return redirect(url_for("dashboard"))
+        else:
+            flash("Usuário ou senha incorretos!", "danger")
+            return redirect(url_for("index"))
             
-            # Tratamento da data vinda do PostgreSQL
-            if isinstance(data_inicio, str):
-                data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
-            elif isinstance(data_inicio, datetime):
-                data_inicio = data_inicio.date()
+    return redirect(url_for("index"))
 
-            duracao_ciclo = int(dados['duracao_ciclo'])
-            duracao_menstruacao = int(dados['duracao_menstruacao'])
+@app.route("/cadastro", methods=["POST"])
+def cadastro_page():
+    if request.method == "POST":
+        novo_usuario = request.form["usuario_cadastro"].strip()
+        nova_senha = request.form["senha_cadastro"].strip()
+        senha_criptografada = generate_password_hash(nova_senha)
 
-            # Cálculos do Ciclo
-            fim_menstruacao = data_inicio + timedelta(days=duracao_menstruacao - 1)
-            proxima_menstruacao = data_inicio + timedelta(days=duracao_ciclo)
-            dia_ovulacao = proxima_menstruacao - timedelta(days=14)
-            inicio_fertil = dia_ovulacao - timedelta(days=5)
-            fim_fertil = dia_ovulacao + timedelta(days=1)
+        try:
+            conexao = criar_conexao()
+            cursor = conexao.cursor()
+            
+            cursor.execute("INSERT INTO usuarios (nome, senha) VALUES (%s, %s)", (novo_usuario, senha_criptografada))
+            conexao.commit()
+            
+            cursor.close()
+            conexao.close()
+            
+            session["usuario"] = novo_usuario
+            return redirect(url_for("dashboard"))
+            
+        except Exception:
+            flash("Este nome de usuário já está cadastrado!", "warning")
+            return redirect(url_for("index"))
+            
+    return redirect(url_for("index"))
 
-            ciclo_calculado = {
-                'ultima_menstruacao': data_inicio.strftime('%d/%m/%Y'),
-                'fim_menstruacao': fim_menstruacao.strftime('%d/%m/%Y'),
-                'proxima_menstruacao': proxima_menstruacao.strftime('%d/%m/%Y'),
-                'inicio_fertil': inicio_fertil.strftime('%d/%m/%Y'),
-                'fim_fertil': fim_fertil.strftime('%d/%m/%Y'),
-                'dia_ovulacao': dia_ovulacao.strftime('%d/%m/%Y'),
-                'duracao_ciclo': duracao_ciclo,
-                'duracao_menstruacao': duracao_menstruacao,
-                'raw_date': data_inicio.strftime('%Y-%m-%d')
-            }
+@app.route("/dashboard")
+def dashboard():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    
+    usuario = session["usuario"]
+    conexao = criar_conexao()
+    
+    from psycopg2.extras import RealDictCursor
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
+    
+    sql_busca = """
+        SELECT ultima_menstruacao, duracao_ciclo 
+        FROM ciclo_menstrual 
+        WHERE usuario_nome = %s 
+        ORDER BY id DESC LIMIT 1
+    """
+    cursor.execute(sql_busca, (usuario,))
+    resultado = cursor.fetchone()
 
-    except Exception as e:
-        print(f"Erro ao buscar ciclo: {e}")
-        flash("Erro ao carregar dados do banco.", "danger")
+    fase_slug = "Folicular"
+    dica = None
 
-    return render_template('ciclo.html', ciclo=ciclo_calculado)
+    if resultado:
+        val_data = resultado["ultima_menstruacao"]
+        if hasattr(val_data, "strftime"):
+            data_inicio = datetime.combine(val_data, datetime.min.time()) if not isinstance(val_data, datetime) else val_data
+        else:
+            data_inicio = datetime.strptime(str(val_data), "%Y-%m-%d")
 
-if __name__ == '__main__':
-    port = int(os.getenv("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+        duracao_ciclo = resultado["duracao_ciclo"] or 28
+        hoje = datetime.now()
+        
+        dias_decorridos = (hoje.date() - data_inicio.date()).days
+        dia_do_ciclo = (dias_decorridos % duracao_ciclo) + 1
+
+        if dia_do_ciclo <= 5:
+            fase_slug = "Menstrual"
+        elif dia_do_ciclo <= 13:
+            fase_slug = "Folicular"
+        elif dia_do_ciclo <= 16:
+            fase_slug = "Ovulatória"
+        else:
+            fase_slug = "Lútea"
+
+    cursor.execute("SELECT exercicio, alimentacao FROM dicas_ciclo WHERE fase = %s LIMIT 1", (fase_slug,))
+    dica = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    return render_template(
+        "dashboard.html", 
+        usuario=usuario, 
+        fase_atual=fase_slug, 
+        dica=dica
+    )
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
+@app.route("/seguranca")
+def seguranca():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("seguranca.html")
+
+@app.route("/ciclo")
+def ciclo():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("ciclo.html")
+
+@app.route("/saude")
+def saude():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("saude.html")
+
+@app.route("/exercicios")
+def exercicios():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("exercicios.html")
+
+@app.route("/caminhada")
+def caminhada():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("caminhada.html")
+
+@app.route("/denuncia", methods=["GET", "POST"])
+def denuncia():
+    if "usuario" not in session:
+        if request.is_json:
+            return jsonify({"status": "nao_autorizado"}), 401
+        return redirect(url_for("index"))
+
+    usuario = session["usuario"]
+    conexao = criar_conexao()
+    
+    from psycopg2.extras import RealDictCursor
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
+
+    if request.method == "POST" and (request.is_json or request.headers.get("Content-Type") == "application/json"):
+        dados = request.get_json() or {}
+        lat = dados.get("latitude")
+        lng = dados.get("longitude")
+
+        cursor.execute("SELECT tel_msg, tel_video, tel_ligar FROM contatos_emergencia WHERE usuario_nome = %s LIMIT 1", (usuario,))
+        contato = cursor.fetchone()
+
+        if contato:
+            numero_alvo = contato.get("tel_msg") or contato.get("tel_video") or contato.get("tel_ligar")
+            if numero_alvo:
+                enviar_whatsapp_emergencia(numero_alvo, lat, lng)
+
+        cursor.close()
+        conexao.close()
+        return jsonify({"status": "sucesso", "mensagem": "Alerta disparado!"}), 200
+        
+    cursor.close()
+    conexao.close()
+    return render_template("denuncia.html")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
