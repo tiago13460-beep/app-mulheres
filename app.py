@@ -7,7 +7,7 @@ from conexao import criar_conexao, inicializar_banco
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 
-# Inicializa as tabelas do banco de dados automaticamente no Render
+# Inicializa as tabelas estruturais automaticamente no PostgreSQL do Render
 inicializar_banco()
 
 @app.route("/")
@@ -31,6 +31,7 @@ def login_page():
         cursor.close()
         conexao.close()
 
+        # psycopg2 retorna uma tupla posicional para o fetchone()
         if resultado and check_password_hash(resultado[1], senha_input):
             session["usuario"] = resultado[0]
             return redirect(url_for("dashboard"))
@@ -45,13 +46,15 @@ def cadastro_page():
     if request.method == "POST":
         novo_usuario = request.form["usuario_cadastro"].strip()
         nova_senha = request.form["senha_cadastro"].strip()
+
         senha_criptografada = generate_password_hash(nova_senha)
 
         try:
             conexao = criar_conexao()
             cursor = conexao.cursor()
             
-            cursor.execute("INSERT INTO usuarios (nome, senha) VALUES (%s, %s)", (novo_usuario, senha_criptografada))
+            sql = "INSERT INTO usuarios (nome, senha) VALUES (%s, %s)"
+            cursor.execute(sql, (novo_usuario, senha_criptografada))
             conexao.commit()
             
             cursor.close()
@@ -86,7 +89,7 @@ def dashboard():
     cursor.execute(sql_busca, (usuario,))
     resultado = cursor.fetchone()
 
-    fase_slug = "Folicular"
+    fase_slug = "Folicular" 
     dica = None
 
     if resultado:
@@ -214,11 +217,38 @@ def denuncia():
 
     cursor.close()
     conexao.close()
+
     return render_template("denuncia.html", contatos=contatos)
 
 @app.route("/disparar_emergencia", methods=["POST"])
 def disparar_emergencia():
-    return jsonify({"status": "sucesso"}), 200
+    if "usuario" in session:
+        try:
+            conexao = criar_conexao()
+            cursor = conexao.cursor()
+            
+            cursor.execute("SELECT id FROM usuarios WHERE nome = %s LIMIT 1", (session["usuario"],))
+            user_data = cursor.fetchone()
+            usuario_id = user_data[0] if user_data else 1
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS alertas_emergencia (
+                    id SERIAL PRIMARY KEY,
+                    usuario_id INTEGER,
+                    data_hora TIMESTAMP
+                );
+            """)
+            
+            sql = "INSERT INTO alertas_emergencia (usuario_id, data_hora) VALUES (%s, %s)"
+            cursor.execute(sql, (usuario_id, datetime.now()))
+            conexao.commit()
+            
+            cursor.close()
+            conexao.close()
+            return jsonify({"status": "sucesso"}), 200
+        except Exception as e:
+            return jsonify({"status": "erro", "detalhes": str(e)}), 500
+    return jsonify({"status": "nao_autorizado"}), 401
 
 @app.route("/saude")
 def saude():
