@@ -3,13 +3,12 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import requests
-# Importa as funções do nosso arquivo de conexão corrigido
 from conexao import criar_conexao, inicializar_banco
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 
-# Inicializa as tabelas do banco de dados na inicialização do servidor do Render
+# Garante a criação das tabelas na inicialização
 inicializar_banco()
 
 # Configurações da API de WhatsApp
@@ -25,7 +24,7 @@ def enviar_whatsapp_emergencia(numero_destino, lat, lng):
         numero_limpo = f"55{numero_limpo}"
 
     if lat and lng:
-        link_maps = f"https://www.google.com/maps?q={lat},{lng}"
+        link_maps = f"https://google.com{lat},{lng}"
         texto_mensagem = f"🚨 *ALERTA DE EMERGÊNCIA - ELA VIVA* 🚨\n\nPreciso de ajuda urgente!\n\n📍 *Minha localização em tempo real:*\n{link_maps}"
     else:
         texto_mensagem = "🚨 *ALERTA DE EMERGÊNCIA - ELA VIVA* 🚨\n\nPreciso de ajuda urgente!\n(Localização GPS indisponível no momento)."
@@ -64,6 +63,7 @@ def login_page():
         cursor.close()
         conexao.close()
 
+        # Ajustado para tuplas do psycopg2 de forma segura
         if resultado and check_password_hash(resultado[1], senha_input):
             session["usuario"] = resultado[0]
             return redirect(url_for("dashboard"))
@@ -107,7 +107,6 @@ def dashboard():
     usuario = session["usuario"]
     conexao = criar_conexao()
     
-    # Cursor do psycopg2 configurado para retornar dicionários, imitando o comportamento do MySQL
     from psycopg2.extras import RealDictCursor
     cursor = conexao.cursor(cursor_factory=RealDictCursor)
     
