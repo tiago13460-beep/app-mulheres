@@ -8,7 +8,7 @@ from conexao import criar_conexao, inicializar_banco
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 
-# Garante a criação automática das tabelas estruturais no PostgreSQL do Render
+# Inicializa as tabelas do banco automaticamente no Render
 inicializar_banco()
 
 # Configurações da API de WhatsApp
@@ -38,7 +38,6 @@ def enviar_whatsapp_emergencia(numero_destino, lat, lng):
     }
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=8)
-        # CORREÇÃO: Especificados códigos de retorno de sucesso HTTP válidos
         return response.status_code in [200, 201]
     except Exception:
         return False
@@ -258,7 +257,7 @@ def disparar_emergencia():
             
             cursor.execute("SELECT id FROM usuarios WHERE nome = %s LIMIT 1", (session["usuario"],))
             user_data = cursor.fetchone()
-            usuario_id = user_data[0] if user_data else 1
+            usuario_id = user_data if user_data else 1
             
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS alertas_emergencia (
@@ -274,3 +273,5 @@ def disparar_emergencia():
             
             cursor.close()
             conexao.close()
+            return jsonify({"status": "sucesso"}), 200
+        except Exception:
