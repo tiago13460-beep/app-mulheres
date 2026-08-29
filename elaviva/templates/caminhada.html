@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElaViva — Modo Caminhada Segura</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #fcf8f9;
+            color: #4a4a4a;
+        }
+        .navbar-brand { font-weight: 800; color: #d63384 !important; }
+        .main-container { margin-top: 90px; max-width: 600px; }
+        .card-custom { border: none; border-radius: 20px; background: white; }
+        .btn-alerta {
+            background: linear-gradient(135deg, #dc3545 0%, #b8236c 100%);
+            color: white;
+            font-weight: bold;
+            border: none;
+            border-radius: 50%;
+            width: 130px;
+            height: 130px;
+            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-alerta:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(220, 53, 69, 0.5);
+            color: white;
+        }
+        .status-tracker {
+            background-color: #fff0f5;
+            border-left: 5px solid #d63384;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Menu Superior -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top shadow-sm">
+        <div class="container">
+            <div class="d-flex align-items-center gap-3">
+                <a href="/dashboard" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Voltar
+                </a>
+                <a class="navbar-brand mb-0 h1" href="/dashboard">🌸 ElaViva</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <div class="container main-container py-4">
+        
+        <!-- Mensagens de Alerta/Sucesso do Flask -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 small" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Card de Monitoramento da Caminhada -->
+        <div class="card card-custom p-4 shadow-sm text-center mb-4">
+            <h4 class="fw-bold text-dark mb-1"><i class="fa-solid fa-person-walking text-danger me-2"></i>Caminhada Ativa</h4>
+            <p class="text-muted small">Seu trajeto está sendo acompanhado. Se notar algo suspeito ao redor, relate imediatamente abaixo.</p>
+            
+            <div class="status-tracker p-3 my-3 text-start">
+                <div class="d-flex align-items-center gap-2 small">
+                    <span class="spinner-grow spinner-grow-sm text-danger" role="status"></span>
+                    <strong class="text-danger">GPS Ativo:</strong> 
+                    <span id="gps-status" class="text-secondary">Aguardando acionamento...</span>
+                </div>
+            </div>
+
+            <!-- Botão de Pânico/Alerta Rápido -->
+            <div class="d-flex justify-content-center my-4">
+                <button type="button" class="btn btn-alerta d-flex flex-column align-items-center justify-content-center" onclick="iniciarRelatoAlerta()">
+                    <i class="fa-solid fa-triangle-exclamation mb-2" style="font-size: 2rem;"></i>
+                    <span>RELATAR<br>ALERTA</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Formulário Secreto de Alerta (Só aparece após clicar no botão) -->
+        <div id="secao-formulario-alerta" class="card card-custom p-4 shadow-sm border-top border-4 border-danger d-none animate__animated animate__fadeIn">
+            <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-bullhorn text-danger me-2"></i>O que você identificou?</h5>
+            
+            <form action="/registrar_alerta" method="POST">
+                <!-- Inputs ocultos para armazenar latitude e longitude capturadas pelo JS -->
+                <input type="hidden" name="latitude" id="input-lat">
+                <input type="hidden" name="longitude" id="input-lng">
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Tipo de Situação</label>
+                    <select name="tipo_alerta" class="form-select rounded-3" required>
+                        <option value="" disabled selected>Selecione uma opção...</option>
+                        <option value="Rua Sem Iluminação / Escura">Rua Sem Iluminação / Escura</option>
+                        <option value="Presença de Indivíduo Suspeito">Presença de Indivíduo Suspeito</option>
+                        <option value="Veículo em Atitude Suspeita">Veículo em Atitude Suspeita</option>
+                        <option value="Via Bloqueada ou Sem Saída Segura">Via Bloqueada ou Sem Saída Segura</option>
+                        <option value="Outro Risco Próximo">Outro Risco Próximo</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Descrição Breve (Opcional)</label>
+                    <textarea name="descricao" class="form-control rounded-3" rows="3" placeholder="Ex: Poste apagado próximo à esquina do mercado, ou homem parado observando muito a rua."></textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4 w-50 fw-bold small border" onclick="cancelarRelato()">Cancelar</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 w-50 fw-bold small">Enviar Alerta</button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script de Geolocalização e Controle de Tela -->
+    <script>
+        function iniciarRelatoAlerta() {
+            const statusGps = document.getElementById('gps-status');
+            statusGps.innerHTML = "Obtendo sua localização precisa...";
+
+            // Verifica se o navegador suporta geolocalização
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(posicao) {
+                        // Sucesso ao capturar coordenadas
+                        const lat = posicao.coords.latitude;
+                        const lng = posicao.coords.longitude;
+
+                        document.getElementById('input-lat').value = lat;
+                        document.getElementById('input-lng').value = lng;
+
+                        statusGps.innerHTML = `Localização capturada com sucesso! (Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)})`;
+                        
+                        // Revela o formulário de descrição
+                        document.getElementById('secao-formulario-alerta').classList.remove('d-none');
+                        // Rola a tela suavemente para o formulário
+                        document.getElementById('secao-formulario-alerta').scrollIntoView({ behavior: 'smooth' });
+                    },
+                    function(erro) {
+                        // Tratamento de erros do GPS
+                        statusGps.innerHTML = "<span class='text-danger'>Erro ao obter GPS. Verifique se a localização está ativa.</span>";
+                        alert("Por favor, ative a localização/GPS do seu aparelho para conseguir enviar o relatório.");
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 } // Força alta precisão
+                );
+            } else {
+                statusGps.innerHTML = "<span class='text-danger'>Geolocalização não suportada neste aparelho.</span>";
+            }
+        }
+
+        function cancelarRelato() {
+            document.getElementById('secao-formulario-alerta').classList.add('d-none');
+            document.getElementById('gps-status').innerHTML = "Aguardando acionamento...";
+        }
+    </script>
+</body>
+</html>

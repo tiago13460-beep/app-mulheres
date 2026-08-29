@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contatos de Emergência - ElaViva</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #f8f9fa; 
+            user-select: none;
+        }
+        .btn-action {
+            border-radius: 16px;
+            padding: 1rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR DISCRETA -->
+    <nav class="navbar navbar-light bg-white border-bottom py-3 shadow-sm">
+        <div class="container">
+            <!-- Usa onclick com replace para nao deixar /denuncia no historico ao sair -->
+            <a class="navbar-brand fw-bold text-secondary fs-6" href="#" onclick="sairDaDenuncia(); return false;">
+                <i class="fa-solid fa-arrow-left me-2"></i>Voltar ao Painel
+            </a>
+            <span class="badge bg-danger rounded-pill px-3 py-2">Modo de Segurança</span>
+        </div>
+    </nav>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div class="container py-4" style="max-width: 600px;">
+
+        <!-- MENSAGENS FLASH DO FLASK -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="text-center mb-4">
+            <h4 class="fw-bold text-dark mb-1">Ações de Emergência</h4>
+            <p class="text-muted small">Acione seus contatos diretos com um toque ou atualize seus números salvos.</p>
+        </div>
+
+        <!-- BOTÕES DE AÇÃO RÁPIDA -->
+        <div class="d-grid gap-3 mb-5">
+            
+            <!-- 1. CHAMADA DE VÍDEO -->
+            {% if contatos and contatos.tel_video %}
+                <a href="https://wa.me/55{{ contatos.tel_video }}?text=Emerg%C3%AAncia!%20Preciso%20fazer%20uma%20chamada%20de%20v%C3%ADdeo%20agora." target="_blank" class="btn btn-primary btn-action d-flex align-items-center justify-content-between text-decoration-none shadow-sm">
+                    <div class="text-start">
+                        <i class="fa-solid fa-video fa-lg me-2"></i>
+                        <strong class="fs-6">Videochamada Rápida</strong>
+                        <div class="small opacity-75">{{ contatos.nome_video or 'Contato de Confiança' }} ({{ contatos.tel_video }})</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </a>
+            {% else %}
+                <div class="alert alert-secondary text-center small mb-0 rounded-3">
+                    <i class="fa-solid fa-circle-info me-1"></i> Cadastre o 1º número abaixo para ativar a Videochamada.
+                </div>
+            {% endif %}
+
+            <!-- 2. ENVIAR MENSAGEM SOS -->
+            {% if contatos and contatos.tel_msg %}
+                <a href="https://wa.me/55{{ contatos.tel_msg }}?text=PRECISO%20DE%20AJUDA!%20Por%20favor%20entre%20em%20contato%20comigo%20ou%20venha%20ao%20meu%20encontro%20urgente." target="_blank" class="btn btn-warning text-dark btn-action d-flex align-items-center justify-content-between text-decoration-none shadow-sm">
+                    <div class="text-start">
+                        <i class="fa-solid fa-comment-sms fa-lg me-2"></i>
+                        <strong class="fs-6">Enviar Mensagem SOS</strong>
+                        <div class="small opacity-75">{{ contatos.nome_msg or 'Contato de Apoio' }} ({{ contatos.tel_msg }})</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </a>
+            {% else %}
+                <div class="alert alert-secondary text-center small mb-0 rounded-3">
+                    <i class="fa-solid fa-circle-info me-1"></i> Cadastre o 2º número abaixo para ativar a Mensagem SOS.
+                </div>
+            {% endif %}
+
+            <!-- 3. LIGAÇÃO DIRETA (POLÍCIA OU EMERGÊNCIA) -->
+            <a href="tel:{{ contatos.tel_ligar if contatos and contatos.tel_ligar else '190' }}" class="btn btn-danger btn-action d-flex align-items-center justify-content-between text-decoration-none shadow-sm">
+                <div class="text-start">
+                    <i class="fa-solid fa-phone-flip fa-lg me-2"></i>
+                    <strong class="fs-6">Ligar para Emergência</strong>
+                    <div class="small opacity-75">{{ contatos.nome_ligar if contatos and contatos.nome_ligar else 'Polícia Militar' }} ({{ contatos.tel_ligar if contatos and contatos.tel_ligar else '190' }})</div>
+                </div>
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+
+        </div>
+
+        <!-- FORMULÁRIO DE CONFIGURAÇÃO DOS 3 NÚMEROS -->
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+            <h6 class="fw-bold text-dark mb-3">
+                <i class="fa-solid fa-gear text-danger me-2"></i>Configurar Números Salvos
+            </h6>
+
+            <form action="{{ url_for('denuncia') }}" method="POST">
+                
+                <!-- NÚMERO 1: VIDEOCHAMADA -->
+                <div class="mb-3 p-3 bg-light rounded-3">
+                    <label class="form-label fw-semibold text-primary small mb-2">
+                        <i class="fa-solid fa-video me-1"></i> 1º Número: Chamada de Vídeo
+                    </label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="text" name="nome_video" class="form-control form-control-sm" placeholder="Nome (Ex: Mãe)" value="{{ contatos.nome_video if contatos else '' }}">
+                        </div>
+                        <div class="col-6">
+                            <input type="tel" name="tel_video" class="form-control form-control-sm" placeholder="DDD + Número" value="{{ contatos.tel_video if contatos else '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NÚMERO 2: MENSAGEM SOS -->
+                <div class="mb-3 p-3 bg-light rounded-3">
+                    <label class="form-label fw-semibold text-warning text-dark small mb-2">
+                        <i class="fa-solid fa-comment me-1"></i> 2º Número: Enviar Mensagem
+                    </label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="text" name="nome_msg" class="form-control form-control-sm" placeholder="Nome (Ex: Amiga)" value="{{ contatos.nome_msg if contatos else '' }}">
+                        </div>
+                        <div class="col-6">
+                            <input type="tel" name="tel_msg" class="form-control form-control-sm" placeholder="DDD + Número" value="{{ contatos.tel_msg if contatos else '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NÚMERO 3: LIGAÇÃO DIRETA -->
+                <div class="mb-3 p-3 bg-light rounded-3">
+                    <label class="form-label fw-semibold text-danger small mb-2">
+                        <i class="fa-solid fa-phone me-1"></i> 3º Número: Ligação Direta
+                    </label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="text" name="nome_ligar" class="form-control form-control-sm" placeholder="Ex: Polícia / 190" value="{{ contatos.nome_ligar if contatos else 'Polícia Militar' }}">
+                        </div>
+                        <div class="col-6">
+                            <input type="tel" name="tel_ligar" class="form-control form-control-sm" placeholder="Ex: 190" value="{{ contatos.tel_ligar if contatos else '190' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-dark w-100 rounded-pill fw-semibold mt-2 py-2">
+                    Salvar Números de Emergência
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Função para sair da tela sem deixar histórico
+        function sairDaDenuncia() {
+            window.location.replace("{{ url_for('dashboard') }}");
+        }
+
+        // PREVENÇÃO DO BOTÃO VOLTAR DO NAVEGADOR / CELULAR
+        (function() {
+            // Insere um estado extra no histórico para interceptar o clique de 'Voltar'
+            history.pushState(null, null, location.href);
+            
+            window.onpopstate = function() {
+                // Quando o usuário clica no botão 'Voltar' do navegador, redireciona para o Dashboard
+                window.location.replace("{{ url_for('dashboard') }}");
+            };
+        })();
+
+        // SCRIPT OCULTO DE 3 CLIQUES PARA SAIR DA DENÚNCIA
+        let contadorCliquesRetorno = 0;
+        let timerCliqueRetorno;
+
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.closest('form')) {
+                return;
+            }
+
+            contadorCliquesRetorno++;
+            clearTimeout(timerCliqueRetorno);
+
+            if (contadorCliquesRetorno === 3) {
+                sairDaDenuncia();
+                contadorCliquesRetorno = 0;
+            }
+
+            timerCliqueRetorno = setTimeout(function() {
+                contadorCliquesRetorno = 0;
+            }, 1200);
+        });
+    </script>
+</body>
+</html>

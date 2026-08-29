@@ -1,0 +1,48 @@
+body {
+    background-color: #f6f7fb;
+    font-family: Arial, sans-serif;
+}
+
+/* Navbar estilo app */
+.navbar {
+    padding: 15px;
+}
+
+/* Cards estilo mobile */
+.card {
+    border-radius: 15px;
+    border: none;
+}
+
+/* Botões maiores (cara de app) */
+.btn {
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 16px;
+}
+
+/* Títulos mais modernos */
+h3, h2 {
+    font-weight: bold;
+}
+
+/* Espaçamento mobile */
+.container {
+    padding-bottom: 30px;
+}
+
+/* Responsividade extra para celular */
+@media (max-width: 768px) {
+
+    .card {
+        margin-bottom: 15px;
+    }
+
+    h3 {
+        font-size: 20px;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
