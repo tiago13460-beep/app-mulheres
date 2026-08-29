@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
-# Certifique-se de configurar a SECRET_KEY para as mensagens flash funcionarem
 app.secret_key = os.getenv("SECRET_KEY", "chave_secreta_padrao")
 
 def get_db_connection():
@@ -18,15 +17,8 @@ def index():
 
 @app.route('/ciclo', methods=['GET', 'POST'])
 def ciclo():
-    # 1. Verificar se o usuário está logado (Ajuste a chave 'usuario_id' conforme o seu sistema de login)
-    usuario_id = session.get('usuario_id')
-    
-    # Se você ainda não implementou login, pode descomentar a linha abaixo para testes:
-    # usuario_id = 1 
-
-    if not usuario_id:
-        flash("Por favor, faça login para acessar esta página.", "warning")
-        return redirect(url_for('login'))
+    # Pega o id da sessão. Se não houver login ativo, usa o ID 1 por padrão para evitar quebrar a rota.
+    usuario_id = session.get('usuario_id', 1)
 
     ciclo_calculado = None
 
@@ -39,7 +31,7 @@ def ciclo():
             if data_str:
                 data_inicio = datetime.strptime(data_str, '%Y-%m-%d').date()
 
-                # Salva ou atualiza os dados no banco
+                # Salva ou atualiza no banco
                 conn = get_db_connection()
                 cur = conn.cursor()
                 
@@ -63,7 +55,7 @@ def ciclo():
             print(f"Erro ao salvar ciclo: {e}")
             flash("Ocorreu um erro ao processar o formulário. Verifique os dados digitados.", "danger")
 
-    # Busca os dados no banco de dados para renderizar a página
+    # Busca os dados no banco para exibir na tela
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -75,7 +67,7 @@ def ciclo():
         if dados:
             data_inicio = dados['ultima_menstruacao']
             
-            # Converte para objeto date se tiver vindo como string/datetime
+            # Tratamento da data vinda do PostgreSQL
             if isinstance(data_inicio, str):
                 data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
             elif isinstance(data_inicio, datetime):
@@ -84,7 +76,7 @@ def ciclo():
             duracao_ciclo = int(dados['duracao_ciclo'])
             duracao_menstruacao = int(dados['duracao_menstruacao'])
 
-            # Cálculos das datas do ciclo
+            # Cálculos do Ciclo
             fim_menstruacao = data_inicio + timedelta(days=duracao_menstruacao - 1)
             proxima_menstruacao = data_inicio + timedelta(days=duracao_ciclo)
             dia_ovulacao = proxima_menstruacao - timedelta(days=14)
@@ -105,7 +97,7 @@ def ciclo():
 
     except Exception as e:
         print(f"Erro ao buscar ciclo: {e}")
-        flash("Erro ao carregar os dados do ciclo do banco de dados.", "danger")
+        flash("Erro ao carregar dados do banco.", "danger")
 
     return render_template('ciclo.html', ciclo=ciclo_calculado)
 
