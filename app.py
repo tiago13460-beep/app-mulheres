@@ -193,7 +193,7 @@ def ciclo():
             cursor.close()
             conexao.close()
             
-            flash("Ciclo menstrual atualizado com sucesso!", "success")
+            flash("Ciclo menstrual updated com sucesso!", "success")
             return redirect(url_for("dashboard"))
             
         except Exception:
@@ -259,7 +259,6 @@ def disparar_emergencia():
             user_data = cursor.fetchone()
             usuario_id = user_data[0] if user_data else 1
             
-            # Garante a criação da tabela de alertas históricos se não existir
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS alertas_emergencia (
                     id SERIAL PRIMARY KEY,
@@ -274,3 +273,5 @@ def disparar_emergencia():
             
             cursor.close()
             conexao.close()
+            return jsonify({"status": "sucesso"}), 200
+        except Exception as e:
