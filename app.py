@@ -168,10 +168,40 @@ def seguranca():
         return redirect(url_for("index"))
     return render_template("seguranca.html")
 
-@app.route("/ciclo")
+@app.route("/ciclo", methods=["GET", "POST"])
 def ciclo():
     if "usuario" not in session:
         return redirect(url_for("index"))
+        
+    usuario = session["usuario"]
+
+    if request.method == "POST":
+        ultima_menstruacao = request.form.get("ultima_menstruacao")
+        duracao_ciclo = request.form.get("duracao_ciclo", 28)
+
+        if not ultima_menstruacao:
+            flash("Por favor, selecione a data da sua última menstruação.", "warning")
+            return redirect(url_for("ciclo"))
+
+        try:
+            conexao = criar_conexao()
+            cursor = conexao.cursor()
+            
+            sql = "INSERT INTO ciclo_menstrual (usuario_nome, ultima_menstruacao, duracao_ciclo) VALUES (%s, %s, %s)"
+            cursor.execute(sql, (usuario, ultima_menstruacao, int(duracao_ciclo)))
+            conexao.commit()
+            
+            cursor.close()
+            conexao.close()
+            
+            flash("Ciclo menstrual atualizado com sucesso!", "success")
+            return redirect(url_for("dashboard"))
+            
+        except Exception as e:
+            print(f"❌ Erro ao salvar ciclo: {e}")
+            flash("Ocorreu um erro ao salvar o seu ciclo. Tente novamente.", "danger")
+            return redirect(url_for("ciclo"))
+
     return render_template("ciclo.html")
 
 @app.route("/saude")
