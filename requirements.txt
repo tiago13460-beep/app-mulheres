@@ -1,3 +1,4 @@
 flask
 mysql-connector-python
 werkzeug
+psycopg2-binary
