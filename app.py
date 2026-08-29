@@ -2,45 +2,13 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-import requests
 from conexao import criar_conexao, inicializar_banco
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 
-# Inicializa as tabelas do banco automaticamente no Render
+# Inicializa as tabelas do banco de dados automaticamente no Render
 inicializar_banco()
-
-# Configurações da API de WhatsApp
-EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "https://sua-instancia-evolution.com")
-EVOLUTION_INSTANCE = os.getenv("EVOLUTION_INSTANCE", "sua_instancia")
-EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "sua_api_key_aqui")
-
-def enviar_whatsapp_emergencia(numero_destino, lat, lng):
-    if not numero_destino:
-        return False
-    numero_limpo = ''.join(filter(str.isdigit, str(numero_destino)))
-    if not numero_limpo.startswith('55') and len(numero_limpo) <= 11:
-        numero_limpo = f"55{numero_limpo}"
-
-    if lat and lng:
-        link_maps = f"https://google.com{lat},{lng}"
-        texto_mensagem = f"🚨 *ALERTA DE EMERGÊNCIA - ELA VIVA* 🚨\n\nPreciso de ajuda urgente!\n\n📍 *Minha localização em tempo real:*\n{link_maps}"
-    else:
-        texto_mensagem = "🚨 *ALERTA DE EMERGÊNCIA - ELA VIVA* 🚨\n\nPreciso de ajuda urgente!\n(Localização GPS indisponível no momento)."
-
-    endpoint = f"{EVOLUTION_API_URL}/message/sendText/{EVOLUTION_INSTANCE}"
-    headers = {"Content-Type": "application/json", "apikey": EVOLUTION_API_KEY}
-    payload = {
-        "number": numero_limpo,
-        "options": {"delay": 0, "presence": "composing", "linkPreview": True},
-        "textMessage": {"text": texto_mensagem}
-    }
-    try:
-        response = requests.post(endpoint, json=payload, headers=headers, timeout=8)
-        return response.status_code in [200, 201]
-    except Exception:
-        return False
 
 @app.route("/")
 def index():
@@ -250,28 +218,25 @@ def denuncia():
 
 @app.route("/disparar_emergencia", methods=["POST"])
 def disparar_emergencia():
-    if "usuario" in session:
-        try:
-            conexao = criar_conexao()
-            cursor = conexao.cursor()
-            
-            cursor.execute("SELECT id FROM usuarios WHERE nome = %s LIMIT 1", (session["usuario"],))
-            user_data = cursor.fetchone()
-            usuario_id = user_data if user_data else 1
-            
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS alertas_emergencia (
-                    id SERIAL PRIMARY KEY,
-                    usuario_id INTEGER,
-                    data_hora TIMESTAMP
-                );
-            """)
-            
-            sql = "INSERT INTO alertas_emergencia (usuario_id, data_hora) VALUES (%s, %s)"
-            cursor.execute(sql, (usuario_id, datetime.now()))
-            conexao.commit()
-            
-            cursor.close()
-            conexao.close()
-            return jsonify({"status": "sucesso"}), 200
-        except Exception:
+    return jsonify({"status": "sucesso"}), 200
+
+@app.route("/saude")
+def saude():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("saude.html")
+
+@app.route("/exercicios")
+def exercicios():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("exercicios.html")
+
+@app.route("/caminhada")
+def caminhada():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("caminhada.html")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
