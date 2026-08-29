@@ -8,7 +8,7 @@ from conexao import criar_conexao, inicializar_banco
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 
-# Inicializa as tabelas do banco automaticamente no Render
+# Garante a criação automática das tabelas estruturais no PostgreSQL do Render
 inicializar_banco()
 
 # Configurações da API de WhatsApp
@@ -193,7 +193,7 @@ def ciclo():
             cursor.close()
             conexao.close()
             
-            flash("Ciclo menstrual updated com sucesso!", "success")
+            flash("Ciclo menstrual atualizado com sucesso!", "success")
             return redirect(url_for("dashboard"))
             
         except Exception:
