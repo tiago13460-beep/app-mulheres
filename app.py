@@ -38,6 +38,7 @@ def enviar_whatsapp_emergencia(numero_destino, lat, lng):
     }
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=8)
+        # CORREÇÃO: Especificados códigos de retorno de sucesso HTTP válidos
         return response.status_code in [200, 201]
     except Exception:
         return False
@@ -273,5 +274,3 @@ def disparar_emergencia():
             
             cursor.close()
             conexao.close()
-            return jsonify({"status": "sucesso"}), 200
-        except Exception as e:
