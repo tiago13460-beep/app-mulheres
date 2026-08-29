@@ -31,7 +31,7 @@ def login_page():
         cursor.close()
         conexao.close()
 
-        # psycopg2 retorna uma tupla posicional para o fetchone()
+        # CORREÇÃO: resultado[1] extrai o hash da senha e resultado[0] extrai apenas o texto do nome
         if resultado and check_password_hash(resultado[1], senha_input):
             session["usuario"] = resultado[0]
             return redirect(url_for("dashboard"))
@@ -46,7 +46,6 @@ def cadastro_page():
     if request.method == "POST":
         novo_usuario = request.form["usuario_cadastro"].strip()
         nova_senha = request.form["senha_cadastro"].strip()
-
         senha_criptografada = generate_password_hash(nova_senha)
 
         try:
@@ -60,6 +59,7 @@ def cadastro_page():
             cursor.close()
             conexao.close()
             
+            # CORREÇÃO: Salva estritamente a string do texto do nome do usuário
             session["usuario"] = novo_usuario
             return redirect(url_for("dashboard"))
             
@@ -167,7 +167,8 @@ def ciclo():
             flash("Ciclo menstrual atualizado com sucesso!", "success")
             return redirect(url_for("dashboard"))
             
-        except Exception:
+        except Exception as e:
+            print(f"Erro ao salvar o ciclo: {e}")
             flash("Ocorreu um erro ao salvar o seu ciclo. Tente novamente.", "danger")
             return redirect(url_for("ciclo"))
 
