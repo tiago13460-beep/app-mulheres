@@ -10,71 +10,8 @@ app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 # Inicializa as tabelas estruturais automaticamente no PostgreSQL do Render
 inicializar_banco()
 
-@app.route("/")
-def index():
-    if "usuario" in session:
-        return redirect(url_for("dashboard"))
-    return render_template("index.html")
-
-@app.route("/login", methods=["POST"])
-def login_page():
-    if request.method == "POST":
-        usuario_input = request.form["usuario"].strip()
-        senha_input = request.form["senha"].strip()
-
-        conexao = criar_conexao()
-        cursor = conexao.cursor()
-        
-        cursor.execute("SELECT nome, senha FROM usuarios WHERE nome = %s LIMIT 1", (usuario_input,))
-        resultado = cursor.fetchone()
-        
-        cursor.close()
-        conexao.close()
-
-        # CORREÇÃO: resultado[1] extrai o hash da senha e resultado[0] extrai apenas o texto do nome
-        if resultado and check_password_hash(resultado[1], senha_input):
-            session["usuario"] = resultado[0]
-            return redirect(url_for("dashboard"))
-        else:
-            flash("Usuário ou senha incorretos!", "danger")
-            return redirect(url_for("index"))
-            
-    return redirect(url_for("index"))
-
-@app.route("/cadastro", methods=["POST"])
-def cadastro_page():
-    if request.method == "POST":
-        novo_usuario = request.form["usuario_cadastro"].strip()
-        nova_senha = request.form["senha_cadastro"].strip()
-        senha_criptografada = generate_password_hash(nova_senha)
-
-        try:
-            conexao = criar_conexao()
-            cursor = conexao.cursor()
-            
-            sql = "INSERT INTO usuarios (nome, senha) VALUES (%s, %s)"
-            cursor.execute(sql, (novo_usuario, senha_criptografada))
-            conexao.commit()
-            
-            cursor.close()
-            conexao.close()
-            
-            # CORREÇÃO: Salva estritamente a string do texto do nome do usuário
-            session["usuario"] = novo_usuario
-            return redirect(url_for("dashboard"))
-            
-        except Exception:
-            flash("Este nome de usuário já está cadastrado!", "warning")
-            return redirect(url_for("index"))
-            
-    return redirect(url_for("index"))
-
-@app.route("/dashboard")
-def dashboard():
-    if "usuario" not in session:
-        return redirect(url_for("index"))
-    
-    usuario = session["usuario"]
+def calcular_fase_e_dica(usuario):
+    """Função utilitária para calcular a fase e buscar a dica no banco de dados"""
     conexao = criar_conexao()
     
     from psycopg2.extras import RealDictCursor
@@ -119,6 +56,72 @@ def dashboard():
 
     cursor.close()
     conexao.close()
+    
+    return fase_slug, dica
+
+@app.route("/")
+def index():
+    if "usuario" in session:
+        return redirect(url_for("dashboard"))
+    return render_template("index.html")
+
+@app.route("/login", methods=["POST"])
+def login_page():
+    if request.method == "POST":
+        usuario_input = request.form["usuario"].strip()
+        senha_input = request.form["senha"].strip()
+
+        conexao = criar_conexao()
+        cursor = conexao.cursor()
+        
+        cursor.execute("SELECT nome, senha FROM usuarios WHERE nome = %s LIMIT 1", (usuario_input,))
+        resultado = cursor.fetchone()
+        
+        cursor.close()
+        conexao.close()
+
+        if resultado and check_password_hash(resultado[1], senha_input):
+            session["usuario"] = resultado[0]
+            return redirect(url_for("dashboard"))
+        else:
+            flash("Usuário ou senha incorretos!", "danger")
+            return redirect(url_for("index"))
+            
+    return redirect(url_for("index"))
+
+@app.route("/cadastro", methods=["POST"])
+def cadastro_page():
+    if request.method == "POST":
+        novo_usuario = request.form["usuario_cadastro"].strip()
+        nova_senha = request.form["senha_cadastro"].strip()
+        senha_criptografada = generate_password_hash(nova_senha)
+
+        try:
+            conexao = criar_conexao()
+            cursor = conexao.cursor()
+            
+            cursor.execute("INSERT INTO usuarios (nome, senha) VALUES (%s, %s)", (novo_usuario, senha_criptografada))
+            conexao.commit()
+            
+            cursor.close()
+            conexao.close()
+            
+            session["usuario"] = novo_usuario
+            return redirect(url_for("dashboard"))
+            
+        except Exception:
+            flash("Este nome de usuário já está cadastrado!", "warning")
+            return redirect(url_for("index"))
+            
+    return redirect(url_for("index"))
+
+@app.route("/dashboard")
+def dashboard():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    
+    usuario = session["usuario"]
+    fase_slug, dica = calcular_fase_e_dica(usuario)
 
     return render_template(
         "dashboard.html", 
@@ -168,11 +171,13 @@ def ciclo():
             return redirect(url_for("dashboard"))
             
         except Exception as e:
-            print(f"Erro ao salvar o ciclo: {e}")
+            print(f"Erro ao salvar ciclo: {e}")
             flash("Ocorreu um erro ao salvar o seu ciclo. Tente novamente.", "danger")
             return redirect(url_for("ciclo"))
 
-    return render_template("ciclo.html")
+    # CORREÇÃO CRUCIAL: Agora o método GET calcula e envia a fase e a dica para o ciclo.html exibir na tela!
+    fase_slug, dica = calcular_fase_e_dica(usuario)
+    return render_template("ciclo.html", fase_atual=fase_slug, dica=dica)
 
 @app.route("/denuncia", methods=["GET", "POST"])
 def denuncia():
@@ -218,7 +223,6 @@ def denuncia():
 
     cursor.close()
     conexao.close()
-
     return render_template("denuncia.html", contatos=contatos)
 
 @app.route("/disparar_emergencia", methods=["POST"])
@@ -230,7 +234,7 @@ def disparar_emergencia():
             
             cursor.execute("SELECT id FROM usuarios WHERE nome = %s LIMIT 1", (session["usuario"],))
             user_data = cursor.fetchone()
-            usuario_id = user_data[0] if user_data else 1
+            usuario_id = user_data if user_data else 1
             
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS alertas_emergencia (
@@ -247,8 +251,8 @@ def disparar_emergencia():
             cursor.close()
             conexao.close()
             return jsonify({"status": "sucesso"}), 200
-        except Exception as e:
-            return jsonify({"status": "erro", "detalhes": str(e)}), 500
+        except Exception:
+            return jsonify({"status": "erro"}), 500
     return jsonify({"status": "nao_autorizado"}), 401
 
 @app.route("/saude")
