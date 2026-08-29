@@ -45,35 +45,8 @@
             color: white;
             opacity: 0.9;
         }
-        .table-container {
-            border-radius: 15px;
-            overflow: hidden;
-            background: white;
-        }
-        .dia-atual-linha {
-            background-color: #fff0f5 !important;
-            font-weight: bold;
-            border-left: 4px solid #d63384;
-        }
-        .badge-fase {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-        }
         .treino-item-card {
             transition: all 0.3s ease;
-        }
-        .treino-concluido {
-            background-color: #e2e8f0 !important;
-            border-left-color: #198754 !important;
-            opacity: 0.6;
-        }
-        .treino-concluido .text-exercicio {
-            text-decoration: line-through;
-            color: #6c757d !important;
         }
     </style>
 </head>
@@ -143,7 +116,7 @@
                     <div class="row align-items-center">
                         <div class="col-md-8">
                             <span class="badge bg-white text-danger shadow-sm mb-2 fw-bold px-3 py-1 rounded-pill">Fase Atual</span>
-                            <h2 class="fw-bold text-dark mb-2">{{ fase_atual }}</h2>
+                            <h2 class="fw-bold text-dark mb-2">Fase {{ fase_atual }}</h2>
                             <p class="text-secondary mb-0 small"><i class="fa-solid fa-circle-info me-1 text-muted"></i> Acompanhe sua rotina adaptada abaixo.</p>
                         </div>
                         <div class="col-md-4 text-md-end mt-3 mt-md-0">
@@ -158,7 +131,7 @@
                         <h5 class="fw-bold text-dark mb-0">
                             <i class="fa-solid fa-dumbbell text-danger me-2"></i>Sua Rotina de Treino Recomendada
                         </h5>
-                        <span class="badge bg-danger-subtle text-danger rounded-pill fw-bold px-3 small">Fase Atual</span>
+                        <span class="badge bg-danger-subtle text-danger rounded-pill fw-bold px-3 small">Fase {{ fase_atual }}</span>
                     </div>
                     
                     <p class="text-muted small mb-4">Veja as recomendações baseadas no seu ciclo hormonal atual:</p>
@@ -172,7 +145,7 @@
                                     </div>
                                     <div>
                                         <h6 class="fw-bold text-dark mb-1">Exercícios Sugeridos</h6>
-                                        <p class="mb-0 text-secondary small text-exercicio">{{ dica['exercicio'] if dica else 'Exercícios moderados.' }}</p>
+                                        <p class="mb-0 text-secondary small text-exercicio">{{ dica['exercicio'] if dica and dica['exercicio'] else 'Exercícios moderados.' }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -186,7 +159,7 @@
                                     </div>
                                     <div>
                                         <h6 class="fw-bold text-success mb-1">Nutrição e Alimentação</h6>
-                                        <p class="mb-0 text-secondary small text-exercicio">{{ dica['alimentacao'] if dica else 'Alimentação equilibrada.' }}</p>
+                                        <p class="mb-0 text-secondary small text-exercicio">{{ dica['alimentacao'] if dica and dica['alimentacao'] else 'Alimentação equilibrada.' }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -205,3 +178,7 @@
         </div>
     </div>
 
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
