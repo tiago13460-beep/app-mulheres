@@ -8,7 +8,7 @@ from conexao import criar_conexao, inicializar_banco
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "elaviva_secret_key_2026")
 
-# Garante a criação das tabelas na inicialização
+# Garante a criação das tabelas estruturais no PostgreSQL do Render
 inicializar_banco()
 
 # Configurações da API de WhatsApp
@@ -63,7 +63,7 @@ def login_page():
         cursor.close()
         conexao.close()
 
-        # Ajustado para tuplas do psycopg2 de forma segura
+        # Tratamento seguro para tuplas retornadas pelo psycopg2
         if resultado and check_password_hash(resultado[1], senha_input):
             session["usuario"] = resultado[0]
             return redirect(url_for("dashboard"))
@@ -168,6 +168,30 @@ def seguranca():
         return redirect(url_for("index"))
     return render_template("seguranca.html")
 
+@app.route("/ciclo")
+def ciclo():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("ciclo.html")
+
+@app.route("/saude")
+def saude():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("saude.html")
+
+@app.route("/exercicios")
+def exercicios():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("exercicios.html")
+
+@app.route("/caminhada")
+def caminhada():
+    if "usuario" not in session:
+        return redirect(url_for("index"))
+    return render_template("caminhada.html")
+
 @app.route("/denuncia", methods=["GET", "POST"])
 def denuncia():
     if "usuario" not in session:
@@ -198,4 +222,9 @@ def denuncia():
         conexao.close()
         return jsonify({"status": "sucesso", "mensagem": "Alerta disparado!"}), 200
         
-    return redirect(url_for("index"))
+    cursor.close()
+    conexao.close()
+    return render_template("denuncia.html")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
