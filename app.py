@@ -26,30 +26,32 @@ def calcular_fase_e_dica(usuario):
     cursor.execute(sql_busca, (usuario,))
     resultado = cursor.fetchone()
 
-    fase_slug = "Folicular" 
-    dica = None
+    # Retorna None caso o usuário ainda não tenha registrado nenhum ciclo
+    if not resultado:
+        cursor.close()
+        conexao.close()
+        return None, None
 
-    if resultado:
-        val_data = resultado["ultima_menstruacao"]
-        if hasattr(val_data, "strftime"):
-            data_inicio = datetime.combine(val_data, datetime.min.time()) if not isinstance(val_data, datetime) else val_data
-        else:
-            data_inicio = datetime.strptime(str(val_data), "%Y-%m-%d")
+    val_data = resultado["ultima_menstruacao"]
+    if hasattr(val_data, "strftime"):
+        data_inicio = datetime.combine(val_data, datetime.min.time()) if not isinstance(val_data, datetime) else val_data
+    else:
+        data_inicio = datetime.strptime(str(val_data), "%Y-%m-%d")
 
-        duracao_ciclo = resultado["duracao_ciclo"] or 28
-        hoje = datetime.now()
-        
-        dias_decorridos = (hoje.date() - data_inicio.date()).days
-        dia_do_ciclo = (dias_decorridos % duracao_ciclo) + 1
+    duracao_ciclo = resultado["duracao_ciclo"] or 28
+    hoje = datetime.now()
+    
+    dias_decorridos = (hoje.date() - data_inicio.date()).days
+    dia_do_ciclo = (dias_decorridos % duracao_ciclo) + 1
 
-        if dia_do_ciclo <= 5:
-            fase_slug = "Menstrual"
-        elif dia_do_ciclo <= 13:
-            fase_slug = "Folicular"
-        elif dia_do_ciclo <= 16:
-            fase_slug = "Ovulatória"
-        else:
-            fase_slug = "Lútea"
+    if dia_do_ciclo <= 5:
+        fase_slug = "Menstrual"
+    elif dia_do_ciclo <= 13:
+        fase_slug = "Folicular"
+    elif dia_do_ciclo <= 16:
+        fase_slug = "Ovulatória"
+    else:
+        fase_slug = "Lútea"
 
     cursor.execute("SELECT exercicio, alimentacao FROM dicas_ciclo WHERE fase = %s LIMIT 1", (fase_slug,))
     dica = cursor.fetchone()
@@ -168,14 +170,14 @@ def ciclo():
             conexao.close()
             
             flash("Ciclo menstrual atualizado com sucesso!", "success")
-            return redirect(url_for("dashboard"))
+            # Redireciona para permanecer na tela do ciclo e ver as recomendações atualizadas
+            return redirect(url_for("ciclo"))
             
         except Exception as e:
             print(f"Erro ao salvar ciclo: {e}")
             flash("Ocorreu um erro ao salvar o seu ciclo. Tente novamente.", "danger")
             return redirect(url_for("ciclo"))
 
-    # CORREÇÃO CRUCIAL: Agora o método GET calcula e envia a fase e a dica para o ciclo.html exibir na tela!
     fase_slug, dica = calcular_fase_e_dica(usuario)
     return render_template("ciclo.html", fase_atual=fase_slug, dica=dica)
 
